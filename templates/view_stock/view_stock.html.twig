@@ -1,0 +1,159 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Ver Stock{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link href="{{ asset('styles/view_stock.css') }}" rel="stylesheet">
+{% endblock %}
+
+{% block body %}
+    <div class="page-stock">
+        <h1>Ver Stock</h1>
+
+        {% if repuestosBajoStock is not empty %}
+            <div class="stock-warning">
+                <strong>¡Atención!</strong> Los siguientes repuestos están por debajo o igual a su stock mínimo:
+                <ul>
+                    {% for repuesto in repuestosBajoStock %}
+                        <li>{{ repuesto.nombre }} (Cantidad: {{ repuesto.cantidad }}, Stock Mínimo: {{ repuesto.stockMinimo }})</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        <div class="stock-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Cantidad</th>
+                        <th>Stock Mínimo</th>
+                        <th>Descripción</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for repuesto in repuestos %}
+                        <tr data-id="{{ repuesto.id }}">
+                            <td class="editable-cell" data-field="nombre">{{ repuesto.nombre }}</td>
+                            <td class="editable-cell {% if repuesto.cantidad <= repuesto.stockMinimo %}bajo-stock{% endif %}" data-field="cantidad">
+                                {{ repuesto.cantidad }}
+                            </td>
+                            <td class="editable-cell" data-field="stockMinimo">{{ repuesto.stockMinimo }}</td>
+                            <td class="editable-cell" data-field="descripcion">{{ repuesto.descripcion }}</td>
+                            <td class="actions">
+                                <button type="button" class="btn btn-secondary edit-btn" onclick="toggleEditing(this.closest('tr'))">Editar</button>
+                                <button type="button" class="btn btn-primary save-btn" style="display:none;" onclick="saveChanges(this.closest('tr'))">Guardar</button>
+                                <form method="post" action="{{ path('repuestos_delete', {id: repuesto.id}) }}" onsubmit="return confirm('¿Estás seguro de que quieres eliminar este repuesto?');" style="display:inline;">
+                                    <input type="hidden" name="_method" value="DELETE">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ repuesto.id) }}">
+                                    <button class="btn btn-danger">Eliminar</button>
+                                </form>
+                                <input type="hidden" class="csrf-token" value="{{ csrf_token('edit' ~ repuesto.id) }}">
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="5">No hay repuestos en stock.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+                <div style="text-align: center;">
+                    <a href="{{ path('repuestos_index') }}" class="add-btn">Agregar Repuesto</a>
+                </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        function toggleEditing(row) {
+            const cells = row.querySelectorAll('.editable-cell');
+            const editBtn = row.querySelector('.edit-btn');
+            const saveBtn = row.querySelector('.save-btn');
+            
+            cells.forEach(cell => {
+                const currentValue = cell.textContent.trim();
+                const field = cell.dataset.field;
+                
+                if (!cell.classList.contains('editing')) {
+                    const hasBajoStock = cell.classList.contains('bajo-stock');
+                    
+                    cell.classList.add('editing');
+                    const input = document.createElement('input');
+                    input.type = field === 'cantidad' || field === 'stockMinimo' ? 'number' : 'text';
+                    input.value = currentValue;
+                    input.name = field;
+                    input.className = 'form-control editable';
+                    cell.textContent = '';
+                    cell.appendChild(input);
+                    
+                    if (hasBajoStock) {
+                        cell.classList.add('bajo-stock');
+                    }
+                } else {
+                    cell.classList.remove('editing');
+                    const input = cell.querySelector('input');
+                    cell.textContent = input.value;
+                    
+                    if (field === 'cantidad') {
+                        const cantidad = parseInt(input.value);
+                        const stockMinimo = parseInt(row.querySelector('[data-field="stockMinimo"]').textContent);
+                        if (cantidad <= stockMinimo) {
+                            cell.classList.add('bajo-stock');
+                        } else {
+                            cell.classList.remove('bajo-stock');
+                        }
+                    }
+                }
+            });
+
+            editBtn.style.display = editBtn.style.display === 'none' ? '' : 'none';
+            saveBtn.style.display = saveBtn.style.display === 'none' ? '' : 'none';
+        }
+
+        function saveChanges(row) {
+            const id = row.dataset.id;
+            const formData = new FormData();
+            const csrfToken = row.querySelector('.csrf-token').value;
+            const saveBtn = row.querySelector('.save-btn');
+            
+            saveBtn.classList.add('loading');
+            
+            row.querySelectorAll('.editable-cell input').forEach(input => {
+                formData.append(input.name, input.value);
+            });
+
+            formData.append('_token', csrfToken);
+
+            fetch('{{ path('repuestos_edit', {'id': '__id__'}) }}'.replace('__id__', id), {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error al guardar los cambios');
+                }
+                return response.json();
+            })
+            .then(data => {
+                const successMessage = document.createElement('div');
+                successMessage.className = 'alert-success';
+                successMessage.textContent = 'Cambios guardados correctamente';
+                row.closest('.stock-container').insertBefore(successMessage, row.closest('table'));
+                
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                saveBtn.classList.remove('loading');
+                alert(error.message);
+            });
+        }
+    </script>
+{% endblock %}

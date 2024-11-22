@@ -1,0 +1,88 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Register{% endblock %}
+{% block stylesheets %}
+    <link href="{{ asset('styles/register.css') }}" rel="stylesheet">
+    <style>
+        .form-error {
+            color: #dc3545;
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            border: 1px solid #ffcdd2;
+            border-radius: 4px;
+            background-color: #ffebee;
+        }
+        
+        .form-error ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .form-error li {
+            margin-bottom: 0.25rem;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <div class="auth-container">
+        <h1>Registro</h1>
+
+        {% for flash_error in app.flashes('verify_email_error') %}
+            <div class="alert">{{ flash_error }}</div>
+        {% endfor %}
+
+        <div class="color-letters">
+            {{ form_start(registrationForm) }}
+                <div class="form-group">
+                    {{ form_label(registrationForm.email) }}
+                    {{ form_widget(registrationForm.email) }}
+                    {% if registrationForm.email.vars.errors|length > 0 %}
+                        <div class="form-error">
+                            <ul>
+                                {% for error in registrationForm.email.vars.errors %}
+                                    <li>{{ error.message }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form_label(registrationForm.plainPassword) }}
+                    {{ form_widget(registrationForm.plainPassword) }}
+                    {% if registrationForm.plainPassword.vars.errors|length > 0 %}
+                        <div class="form-error">
+                            <ul>
+                                {% for error in registrationForm.plainPassword.vars.errors %}
+                                    <li>{{ error.message }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="terms">
+                    {{ form_widget(registrationForm.agreeTerms) }}
+                    {{ form_label(registrationForm.agreeTerms) }}
+                    {% if registrationForm.agreeTerms.vars.errors|length > 0 %}
+                        <div class="form-error">
+                            <ul>
+                                {% for error in registrationForm.agreeTerms.vars.errors %}
+                                    <li>{{ error.message }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <button type="submit" class="btn btn-primary">Registro</button>
+
+                <div class="auth-link">
+                    <a href="{{ path('app_login') }}">Volver al inicio de sesión</a>
+                </div>
+            {{ form_end(registrationForm) }}
+        </div>
+    </div>
+{% endblock %}

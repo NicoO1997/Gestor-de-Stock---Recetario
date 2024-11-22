@@ -1,0 +1,32 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Página de Inicio{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link href="{{ asset('styles/home_page.css') }}" rel="stylesheet">
+{% endblock %}
+
+{% block body %}
+    <div class="page-home">
+        <header class="home-header">
+            <h1>Bienvenido a la Página de Inicio</h1>
+        </header>
+        <div class="home-container">
+            <div class="content-wrapper">
+                <nav class="home-nav">
+                    <ul>
+                        <li><a href="{{ path('app_view_stock') }}">Visualizar Stock</a></li>
+                        <li><a href="{{ path('app_view_catalog') }}">Visualizar Catálogo</a></li>
+                        <li><a href="{{ path('receta_index') }}">Visualizar Receta</a></li>
+                        <li><a href="{{ path('maquinaria_new') }}">Agregar Maquinaria</a></li>
+                        <li><a href="{{ path('repuestos_index') }}">Agregar Repuestos</a></li>
+                    </ul>
+                </nav>
+            </div>
+            <div class="logout-container">
+                <a href="{{ path('app_logout') }}" class="logout-btn">Cerrar Sesión</a>
+            </div>
+        </div>
+    </div>
+{% endblock %}

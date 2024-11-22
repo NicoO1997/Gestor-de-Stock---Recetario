@@ -1,0 +1,20 @@
+controllers:
+    resource:
+        path: ../src/Controller/
+        namespace: App\Controller
+    type: attribute
+
+view-recipe: 
+    path: /view-recipe
+    controller: App\Controller\ViewRecipeController::index
+    
+
+maquinaria_edit:
+    path: /maquinaria/edit/{id}
+    controller: App\Controller\ViewCatalogController::edit
+    methods: [POST]
+
+receta_update_ajax:
+    path: /receta/{id}/update
+    controller: App\Controller\ViewRecipeController::updateAjax
+    methods: [POST]

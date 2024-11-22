@@ -1,0 +1,229 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Catálogo{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link href="{{ asset('styles/view_catalog.css') }}" rel="stylesheet">
+    <link rel="icon" href="data:,">
+{% endblock %}
+
+{% block body %}
+    <div class="catalog-container">
+        <h1 class="catalog-title">Catálogo de Maquinaria</h1>
+
+        {% if maquinarias is empty %}
+            <p class="no-items">No hay maquinarias registradas.</p>
+        {% else %}
+            <div class="table-responsive">
+                <table class="catalog-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Marca</th>
+                            <th>Cantidad</th>
+                            <th>Descripción</th>
+                            <th>Imagen</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for maquinaria in maquinarias %}
+                            <tr data-id="{{ maquinaria.id }}">
+                                <td class="editable-cell" data-field="nombre">{{ maquinaria.nombre }}</td>
+                                <td class="editable-cell" data-field="marca">{{ maquinaria.marca }}</td>
+                                <td class="editable-cell" data-field="cantidad">{{ maquinaria.cantidad }}</td>
+                                <td class="editable-cell" data-field="descripcion">{{ maquinaria.descripcion }}</td>
+                                <td class="image-cell">
+                                    {% if maquinaria.imagen %}
+                                        <img src="{{ asset('uploads/images/' ~ maquinaria.imagen) }}" 
+                                             alt="{{ maquinaria.nombre }}" 
+                                             class="maquinaria-image">
+                                    {% else %}
+                                        <p class="no-image">No image available</p>
+                                    {% endif %}
+                                    <input type="file" 
+                                           class="image-input" 
+                                           accept="image/*" 
+                                           style="display: none;"
+                                           data-field="imagen">
+                                    <button type="button" 
+                                            class="btn btn-sm btn-secondary change-image-btn" 
+                                            style="display: none;">
+                                        Cambiar imagen
+                                    </button>
+                                </td>
+                                <td class="actions-cell">
+                                    <button type="button" class="btn btn-secondary edit-btn" 
+                                            data-edit-url="{{ path('maquinaria_edit', {'id': maquinaria.id}) }}"
+                                            onclick="toggleEditing(this.closest('tr'))">
+                                        Editar
+                                    </button>
+                                    <button type="button" class="btn btn-primary save-btn" style="display:none;" 
+                                            onclick="saveChanges(this.closest('tr'))">
+                                        Guardar
+                                    </button>
+                                    <form action="{{ path('maquinaria_delete', {'id': maquinaria.id}) }}" method="post" class="delete-form" style="display:inline;">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ maquinaria.id) }}">
+                                        <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                                    </form>
+                                    <input type="hidden" class="csrf-token" value="{{ csrf_token('edit' ~ maquinaria.id) }}">
+                                    <input type="hidden" class="edit-url" value="{{ path('maquinaria_edit', {'id': maquinaria.id}) }}">
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        function toggleEditing(row) {
+        const cells = row.querySelectorAll('.editable-cell');
+        const editBtn = row.querySelector('.edit-btn');
+        const saveBtn = row.querySelector('.save-btn');
+        const imageInput = row.querySelector('.image-input');
+        const changeImageBtn = row.querySelector('.change-image-btn');
+
+        cells.forEach(cell => {
+            if (cell.getAttribute('contenteditable') === 'true') {
+                cell.setAttribute('contenteditable', 'false');
+                cell.classList.remove('editing');
+            } else {
+                cell.setAttribute('contenteditable', 'true');
+                cell.classList.add('editing');
+                cell.dataset.originalValue = cell.textContent;
+            }
+        });
+
+        if (imageInput) {
+            imageInput.style.display = imageInput.style.display === 'none' ? 'block' : 'none';
+            changeImageBtn.style.display = changeImageBtn.style.display === 'none' ? 'block' : 'none';
+        }
+
+        editBtn.style.display = editBtn.style.display === 'none' ? '' : 'none';
+        saveBtn.style.display = saveBtn.style.display === 'none' ? '' : 'none';
+    }
+
+    function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+    }
+
+    async function saveChanges(row) {
+        const editUrl = row.querySelector('.edit-url').value;
+        const csrfToken = row.querySelector('.csrf-token').value;
+        const imageInput = row.querySelector('.image-input');
+
+        const data = {
+            nombre: row.querySelector('[data-field="nombre"]').textContent.trim(),
+            marca: row.querySelector('[data-field="marca"]').textContent.trim(),
+            cantidad: row.querySelector('[data-field="cantidad"]').textContent.trim(),
+            descripcion: row.querySelector('[data-field="descripcion"]').textContent.trim()
+        };
+
+        if (imageInput && imageInput.files.length > 0) {
+            try {
+                data.imagen = await fileToBase64(imageInput.files[0]);
+            } catch (error) {
+                showAlert('danger', 'Error al procesar la imagen');
+                return;
+            }
+        }
+
+        try {
+            const response = await fetch(editUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                if (result.data.imagen) {
+                    const imgElement = row.querySelector('.maquinaria-image');
+                    const imageCell = row.querySelector('.image-cell');
+                    const noImageText = imageCell.querySelector('.no-image');
+
+                    if (imgElement) {
+                        imgElement.src = result.data.imagen + '?t=' + new Date().getTime();
+                    } else if (noImageText) {
+                        noImageText.remove();
+                        const newImg = document.createElement('img');
+                        newImg.src = result.data.imagen + '?t=' + new Date().getTime();
+                        newImg.alt = data.nombre;
+                        newImg.className = 'maquinaria-image';
+                        imageCell.insertBefore(newImg, imageCell.firstChild);
+                    }
+                }
+                if (imageInput) {
+                    imageInput.value = '';
+                }
+                
+                toggleEditing(row);
+                showAlert('success', 'Maquinaria actualizada correctamente');
+
+                setTimeout(() => {
+                    location.reload(true);
+                }, 500);
+            } else {
+                revertChanges(row);
+                showAlert('danger', result.error || 'Error al actualizar la maquinaria');
+            }
+        } catch (error) {
+            revertChanges(row);
+            showAlert('danger', 'Error de conexión');
+            console.error('Error:', error);
+        }
+    }
+
+
+    document.addEventListener('DOMContentLoaded', function() {
+
+        const changeImageBtns = document.querySelectorAll('.change-image-btn');
+        changeImageBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const imageInput = this.parentElement.querySelector('.image-input');
+                imageInput.click();
+            });
+        });
+
+        const imageInputs = document.querySelectorAll('.image-input');
+        imageInputs.forEach(input => {
+            input.addEventListener('change', function(e) {
+                if (this.files && this.files[0]) {
+                    const reader = new FileReader();
+                    const imgElement = this.parentElement.querySelector('.maquinaria-image');
+                    
+                    reader.onload = function(e) {
+                        if (imgElement) {
+                            imgElement.src = e.target.result;
+                        } else {
+                            const newImg = document.createElement('img');
+                            newImg.src = e.target.result;
+                            newImg.className = 'maquinaria-image';
+                            const noImage = input.parentElement.querySelector('.no-image');
+                            if (noImage) {
+                                noImage.replaceWith(newImg);
+                            }
+                        }
+                    };
+                    reader.readAsDataURL(this.files[0]);
+                }
+            });
+        });
+    });
+    </script>
+{% endblock %}

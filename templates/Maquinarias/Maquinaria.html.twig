@@ -1,0 +1,60 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Listado de Maquinarias{% endblock %}
+
+{% block body %}
+    <h1>Listado de Maquinarias</h1>
+
+    {% for message in app.flashes('success') %}
+        <div class="alert alert-success">
+            {{ message }}
+        </div>
+    {% endfor %}
+    
+    {% for message in app.flashes('error') %}
+        <div class="alert alert-danger">
+            {{ message }}
+        </div>
+    {% endfor %}
+
+    <a href="{{ path('maquinaria_new') }}" class="btn btn-primary mb-3">Agregar Nueva Maquinaria</a>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Marca</th>
+                <th>Descripción</th>
+                <th>Cantidad</th>
+                <th>Años de Uso</th>
+                <th>Último Service</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for maquinaria in maquinarias %}
+                <tr>
+                    <td>{{ maquinaria.nombre }}</td>
+                    <td>{{ maquinaria.marca }}</td>
+                    <td>{{ maquinaria.descripcion }}</td>
+                    <td>{{ maquinaria.cantidad }}</td>
+                    <td>{{ maquinaria.aniosUso }}</td>
+                    <td>{{ maquinaria.ultimoService ? maquinaria.ultimoService|date('Y-m-d') : 'No registrado' }}</td>
+                    <td>
+                        <a href="{{ path('maquinaria_edit', {id: maquinaria.id}) }}" class="btn btn-warning btn-sm">Editar</a> 
+                        
+                        <form method="POST" action="{{ path('maquinaria_delete', {'id': maquinaria.id}) }}" class="d-inline" onsubmit="return confirm('¿Estás seguro de que deseas eliminar esta maquinaria?')">
+                            <input type="hidden" name="_method" value="POST">
+                            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ maquinaria.id) }}">
+                            <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="7" class="text-center">No hay maquinarias registradas.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Editar Maquinaria{% endblock %}
+
+{% block body %}
+    <div class="container mt-5">
+        <h1>Editar Maquinaria</h1>
+
+        <form action="{{ path('maquinaria_edit', {'id': maquinaria.id}) }}" method="post">
+            <input type="hidden" name="_method" value="POST">
+
+            <div class="form-group">
+                <label for="nombre">nombre</label>
+                <input type="text" id="nombre" name="nombre" class="form-control" value="{{ maquinaria.nombre }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="marca">marca</label>
+                <input type="text" id="marca" name="marca" class="form-control" value="{{ maquinaria.marca }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="descripcion">descripcion</label>
+                <input type="text" id="descripcion" name="marca" class="form-control" value="{{ maquinaria.descripcion }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="aniosUso">años de uso</label>
+                <input type="number" id="aniosUso" name="aniosUso" class="form-control" value="{{ maquinaria.aniosUso }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="cantidad">Cantidad</label>
+                <input type="number" id="cantidad" name="cantidad" class="form-control" value="{{ maquinaria.cantidad }}" required>
+            </div>
+
+            
+
+            <button type="submit" class="btn btn-primary">Guardar cambios</button>
+            <a href="{{ path('maquinaria_index') }}" class="btn btn-secondary">Cancelar</a>
+        </form>
+    </div>
+{% endblock %}
+
