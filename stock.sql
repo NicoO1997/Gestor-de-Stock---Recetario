@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS `doctrine_migration_versions` (
   PRIMARY KEY (`version`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
 
--- Volcando datos para la tabla stock.doctrine_migration_versions: ~8 rows (aproximadamente)
+mysqlmysql-- Volcando datos para la tabla stock.doctrine_migration_versions: ~8 rows (aproximadamente)
 INSERT INTO `doctrine_migration_versions` (`version`, `executed_at`, `execution_time`) VALUES
 	('DoctrineMigrations\\Version20240910000000', '2024-09-10 15:33:04', 14),
 	('DoctrineMigrations\\Version20240910145607', '2024-09-10 14:56:12', 150),

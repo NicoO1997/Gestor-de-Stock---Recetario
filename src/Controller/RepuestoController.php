@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Repuestos;
 use App\Repository\RepuestosRepository;
+use App\Repository\RecetaRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -30,40 +31,50 @@ class RepuestoController extends AbstractController
     #[Route('/create', name: 'repuestos_create', methods: ['POST'])]
     public function create(Request $request, EntityManagerInterface $entityManager): Response
     {
-        $nombre = $request->request->get('nombre');
-        $descripcion = $request->request->get('descripcion');
-        $cantidad = $request->request->get('cantidad');
-        $stockMinimo = $request->request->get('stock_minimo');
+    $nombre = trim($request->request->get('nombre', ''));
+    $descripcion = trim($request->request->get('descripcion', ''));
+    $cantidad = $request->request->get('cantidad');
+    $stockMinimo = $request->request->get('stock_minimo');
 
-        if (empty($nombre) || empty($descripcion)) {
-            $this->addFlash('error', 'El nombre y la descripción son obligatorios.');
-            return $this->redirectToRoute('repuestos_new');
-        }
+    if (empty($nombre) || strlen($nombre) > 255) {
+        $this->addFlash('error', 'Nombre inválido. Debe tener entre 1 y 255 caracteres.');
+        return $this->redirectToRoute('repuestos_new');
+    }
 
-        $cantidad = filter_var($cantidad, FILTER_VALIDATE_INT);
-        $stockMinimo = filter_var($stockMinimo, FILTER_VALIDATE_INT);
+    if (empty($descripcion)) {
+        $this->addFlash('error', 'La descripción es obligatoria.');
+        return $this->redirectToRoute('repuestos_new');
+    }
 
-        if ($cantidad === false || $cantidad < 0 || $stockMinimo === false || $stockMinimo < 0) {
-            $this->addFlash('error', 'La cantidad y el stock mínimo deben ser números no negativos.');
-            return $this->redirectToRoute('repuestos_new');
-        }
+    $cantidad = filter_var($cantidad, FILTER_VALIDATE_INT, [
+        'options' => ['min_range' => 0]
+    ]);
 
-        try {
-            $repuesto = new Repuestos();
-            $repuesto->setNombre($nombre);
-            $repuesto->setDescripcion($descripcion);
-            $repuesto->setCantidad($cantidad);
-            $repuesto->setStockMinimo($stockMinimo);
+    $stockMinimo = filter_var($stockMinimo, FILTER_VALIDATE_INT, [
+        'options' => ['min_range' => 0]
+    ]);
 
-            $entityManager->persist($repuesto);
-            $entityManager->flush();
+    if ($cantidad === false || $stockMinimo === false) {
+        $this->addFlash('error', 'Cantidad y stock mínimo deben ser números no negativos.');
+        return $this->redirectToRoute('repuestos_new');
+    }
 
-            $this->addFlash('repuesto_success', 'Repuesto agregado correctamente.');
-            return $this->redirectToRoute('repuestos_index');
-        } catch (\Exception $e) {
-            $this->addFlash('error', 'Error al guardar el repuesto: ' . $e->getMessage());
-            return $this->redirectToRoute('repuestos_new');
-        }
+    try {
+        $repuesto = new Repuestos();
+        $repuesto->setNombre($nombre);
+        $repuesto->setDescripcion($descripcion);
+        $repuesto->setCantidad($cantidad);
+        $repuesto->setStockMinimo($stockMinimo);
+
+        $entityManager->persist($repuesto);
+        $entityManager->flush();
+
+        $this->addFlash('repuesto_success', 'Repuesto agregado correctamente.');
+        return $this->redirectToRoute('app_view_stock');  // Updated redirection
+    } catch (\Exception $e) {
+        $this->addFlash('error', 'Error al guardar el repuesto: ' . $e->getMessage());
+        return $this->redirectToRoute('repuestos_new');
+    }
     }
 
 
