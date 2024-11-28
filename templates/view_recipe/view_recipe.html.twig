@@ -230,21 +230,8 @@ function enableEdit(recetaId) {
                 nombreInput.disabled = true;
                 descripcionInput.disabled = true;
                 editButton.textContent = 'Editar';
-                
-                let repuestosHtml = '';
-                repuestosData.forEach(repuesto => {
-                    repuestosHtml += `
-                        <li>
-                            Repuesto ID: ${repuesto.repuestoId} - Cantidad: ${repuesto.cantidad}
-                            <input type="hidden" value="${repuesto.repuestoId}">
-                            <input type="number" value="${repuesto.cantidad}" disabled>
-                        </li>
-                    `;
-                });
-                
-                repuestosContainer.innerHTML = repuestosHtml;
-                
                 alert('Actualización exitosa');
+                location.reload();
             } else {
                 throw new Error(data.message || 'Error desconocido en la actualización');
             }

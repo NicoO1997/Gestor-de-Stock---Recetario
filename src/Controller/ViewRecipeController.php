@@ -120,9 +120,7 @@ class ViewRecipeController extends AbstractController
                     }
                 }
             }
-
             $entityManager->flush();
-
             $this->addFlash('success', 'Receta actualizada con éxito.');
             return $this->redirectToRoute('receta_index');
         }

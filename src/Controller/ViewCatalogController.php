@@ -120,7 +120,7 @@ class ViewCatalogController extends AbstractController
 
             $entityManager->remove($maquinaria);
             $entityManager->flush();
-            return new JsonResponse(['message' => 'Maquinaria eliminada correctamente']);
+            return $this->redirectToRoute('maquinaria_index');
         }
 
         return new JsonResponse(['error' => 'Token inválido'], 403);

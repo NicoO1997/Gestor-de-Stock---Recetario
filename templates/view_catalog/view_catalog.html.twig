@@ -158,7 +158,7 @@
                     const noImageText = imageCell.querySelector('.no-image');
 
                     if (imgElement) {
-                        imgElement.src = result.data.imagen + '?t=' + new Date().getTime();
+                        imgElement.src = "/Gestor-de-Stock---Recetario/public" + result.data.imagen + '?t=' + new Date().getTime();
                     } else if (noImageText) {
                         noImageText.remove();
                         const newImg = document.createElement('img');
@@ -171,7 +171,6 @@
                 if (imageInput) {
                     imageInput.value = '';
                 }
-                
                 toggleEditing(row);
                 showAlert('success', 'Maquinaria actualizada correctamente');
 
