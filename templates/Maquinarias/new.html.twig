@@ -39,7 +39,7 @@
 
         <div class="form-group">
             {{ form_label(form.ultimoService) }}
-            {{ form_widget(form.ultimoService, {'attr': {'class': 'form-control'}}) }}
+            {{ form_widget(form.ultimoService, {'attr': {'class': 'form-control', 'max': "now"|date('Y-m-d')}}) }}
         </div>
 
         <div class="form-group">
@@ -50,4 +50,31 @@
         <button class="btn btn-primary">Agregar Maquinaria</button>
         {{ form_end(form) }}
     </div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const ultimoServiceInput = document.querySelector('#maquinaria_ultimoService');
+            
+            if (ultimoServiceInput) {
+                // Establecer máximo como fecha actual
+                const today = new Date().toISOString().split('T')[0];
+                ultimoServiceInput.setAttribute('max', today);
+
+                // Validación al enviar el formulario
+                ultimoServiceInput.closest('form').addEventListener('submit', function(event) {
+                    const selectedDate = new Date(ultimoServiceInput.value);
+                    const now = new Date();
+
+                    if (selectedDate > now) {
+                        event.preventDefault();
+                        alert('La fecha de último service no puede ser futura');
+                        ultimoServiceInput.focus();
+                    }
+                });
+            }
+        });
+    </script>
 {% endblock %}

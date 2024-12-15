@@ -23,6 +23,7 @@
                             <th>Marca</th>
                             <th>Cantidad</th>
                             <th>Descripción</th>
+                            <th>Último Service</th>
                             <th>Imagen</th>
                             <th>Acciones</th>
                         </tr>
@@ -34,6 +35,9 @@
                                 <td class="editable-cell" data-field="marca">{{ maquinaria.marca }}</td>
                                 <td class="editable-cell" data-field="cantidad">{{ maquinaria.cantidad }}</td>
                                 <td class="editable-cell" data-field="descripcion">{{ maquinaria.descripcion }}</td>
+                                <td class="editable-cell" data-field="ultimoService">
+                                    {{ maquinaria.ultimoService ? maquinaria.ultimoService|date('Y-m-d') : '' }}
+                                </td>
                                 <td class="image-cell">
                                     {% if maquinaria.imagen %}
                                         <img src="{{ asset('uploads/images/' ~ maquinaria.imagen) }}" 
@@ -83,146 +87,139 @@
     {{ parent() }}
     <script>
         function toggleEditing(row) {
-        const cells = row.querySelectorAll('.editable-cell');
-        const editBtn = row.querySelector('.edit-btn');
-        const saveBtn = row.querySelector('.save-btn');
-        const imageInput = row.querySelector('.image-input');
-        const changeImageBtn = row.querySelector('.change-image-btn');
+            const cells = row.querySelectorAll('.editable-cell');
+            const editBtn = row.querySelector('.edit-btn');
+            const saveBtn = row.querySelector('.save-btn');
+            const imageInput = row.querySelector('.image-input');
+            const changeImageBtn = row.querySelector('.change-image-btn');
 
-        cells.forEach(cell => {
-            if (cell.getAttribute('contenteditable') === 'true') {
-                cell.setAttribute('contenteditable', 'false');
-                cell.classList.remove('editing');
-            } else {
-                cell.setAttribute('contenteditable', 'true');
-                cell.classList.add('editing');
-                cell.dataset.originalValue = cell.textContent;
-            }
-        });
-
-        if (imageInput) {
-            imageInput.style.display = imageInput.style.display === 'none' ? 'block' : 'none';
-            changeImageBtn.style.display = changeImageBtn.style.display === 'none' ? 'block' : 'none';
-        }
-
-        editBtn.style.display = editBtn.style.display === 'none' ? '' : 'none';
-        saveBtn.style.display = saveBtn.style.display === 'none' ? '' : 'none';
-    }
-
-    function fileToBase64(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = error => reject(error);
-        });
-    }
-
-    async function saveChanges(row) {
-        const editUrl = row.querySelector('.edit-url').value;
-        const csrfToken = row.querySelector('.csrf-token').value;
-        const imageInput = row.querySelector('.image-input');
-
-        const data = {
-            nombre: row.querySelector('[data-field="nombre"]').textContent.trim(),
-            marca: row.querySelector('[data-field="marca"]').textContent.trim(),
-            cantidad: row.querySelector('[data-field="cantidad"]').textContent.trim(),
-            descripcion: row.querySelector('[data-field="descripcion"]').textContent.trim()
-        };
-
-        if (imageInput && imageInput.files.length > 0) {
-            try {
-                data.imagen = await fileToBase64(imageInput.files[0]);
-            } catch (error) {
-                showAlert('danger', 'Error al procesar la imagen');
-                return;
-            }
-        }
-
-        try {
-            const response = await fetch(editUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken
-                },
-                body: JSON.stringify(data)
-            });
-
-            const result = await response.json();
-
-            if (response.ok) {
-                if (result.data.imagen) {
-                    const imgElement = row.querySelector('.maquinaria-image');
-                    const imageCell = row.querySelector('.image-cell');
-                    const noImageText = imageCell.querySelector('.no-image');
-
-                    if (imgElement) {
-                        imgElement.src = "/Gestor-de-Stock---Recetario/public" + result.data.imagen + '?t=' + new Date().getTime();
-                    } else if (noImageText) {
-                        noImageText.remove();
-                        const newImg = document.createElement('img');
-                        newImg.src = result.data.imagen + '?t=' + new Date().getTime();
-                        newImg.alt = data.nombre;
-                        newImg.className = 'maquinaria-image';
-                        imageCell.insertBefore(newImg, imageCell.firstChild);
+            cells.forEach(cell => {
+                if (cell.getAttribute('contenteditable') === 'true') {
+                    cell.setAttribute('contenteditable', 'false');
+                    cell.classList.remove('editing');
+                } else {
+                    cell.setAttribute('contenteditable', 'true');
+                    cell.classList.add('editing');
+                    cell.dataset.originalValue = cell.textContent;
+                    
+                    if (cell.dataset.field === 'ultimoService') {
+                        const currentValue = cell.textContent.trim();
+                        const today = new Date().toISOString().split('T')[0];
+                        cell.innerHTML = `<input type="date" value="${currentValue}" max="${today}" class="form-control">`;
                     }
                 }
-                if (imageInput) {
-                    imageInput.value = '';
-                }
-                toggleEditing(row);
-                showAlert('success', 'Maquinaria actualizada correctamente');
+            });
 
-                setTimeout(() => {
-                    location.reload(true);
-                }, 500);
-            } else {
-                revertChanges(row);
-                showAlert('danger', result.error || 'Error al actualizar la maquinaria');
+            if (imageInput) {
+                imageInput.style.display = imageInput.style.display === 'none' ? 'block' : 'none';
+                changeImageBtn.style.display = changeImageBtn.style.display === 'none' ? 'block' : 'none';
             }
-        } catch (error) {
-            revertChanges(row);
-            showAlert('danger', 'Error de conexión');
-            console.error('Error:', error);
+
+            editBtn.style.display = editBtn.style.display === 'none' ? '' : 'none';
+            saveBtn.style.display = saveBtn.style.display === 'none' ? '' : 'none';
         }
-    }
 
+        async function saveChanges(row) {
+            const editUrl = row.querySelector('.edit-url').value;
+            const csrfToken = row.querySelector('.csrf-token').value;
+            const imageInput = row.querySelector('.image-input');
 
-    document.addEventListener('DOMContentLoaded', function() {
+            const data = {
+                nombre: row.querySelector('[data-field="nombre"]').textContent.trim(),
+                marca: row.querySelector('[data-field="marca"]').textContent.trim(),
+                cantidad: row.querySelector('[data-field="cantidad"]').textContent.trim(),
+                descripcion: row.querySelector('[data-field="descripcion"]').textContent.trim()
+            };
 
-        const changeImageBtns = document.querySelectorAll('.change-image-btn');
-        changeImageBtns.forEach(btn => {
-            btn.addEventListener('click', function() {
-                const imageInput = this.parentElement.querySelector('.image-input');
-                imageInput.click();
-            });
-        });
-
-        const imageInputs = document.querySelectorAll('.image-input');
-        imageInputs.forEach(input => {
-            input.addEventListener('change', function(e) {
-                if (this.files && this.files[0]) {
-                    const reader = new FileReader();
-                    const imgElement = this.parentElement.querySelector('.maquinaria-image');
-                    
-                    reader.onload = function(e) {
-                        if (imgElement) {
-                            imgElement.src = e.target.result;
-                        } else {
-                            const newImg = document.createElement('img');
-                            newImg.src = e.target.result;
-                            newImg.className = 'maquinaria-image';
-                            const noImage = input.parentElement.querySelector('.no-image');
-                            if (noImage) {
-                                noImage.replaceWith(newImg);
-                            }
-                        }
-                    };
-                    reader.readAsDataURL(this.files[0]);
+            const ultimoServiceCell = row.querySelector('[data-field="ultimoService"]');
+            const dateInput = ultimoServiceCell.querySelector('input[type="date"]');
+            if (dateInput) {
+                const today = new Date().toISOString().split('T')[0];
+                if (dateInput.value > today) {
+                    showAlert('danger', 'La fecha de último service no puede ser futura');
+                    return;
                 }
+                data.ultimoService = dateInput.value;
+            }
+
+            if (imageInput && imageInput.files.length > 0) {
+                try {
+                    data.imagen = await fileToBase64(imageInput.files[0]);
+                } catch (error) {
+                    showAlert('danger', 'Error al procesar la imagen');
+                    return;
+                }
+            }
+
+            try {
+                const response = await fetch(editUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    toggleEditing(row);
+                    showAlert('success', 'Maquinaria actualizada correctamente');
+                    
+                    if (data.ultimoService) {
+                        ultimoServiceCell.textContent = data.ultimoService;
+                    }
+
+                    setTimeout(() => {
+                        location.reload(true);
+                    }, 500);
+                } else {
+                    revertChanges(row);
+                    showAlert('danger', result.error || 'Error al actualizar la maquinaria');
+                }
+            } catch (error) {
+                revertChanges(row);
+                showAlert('danger', 'Error de conexión');
+                console.error('Error:', error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const today = new Date().toISOString().split('T')[0];
+
+            const changeImageBtns = document.querySelectorAll('.change-image-btn');
+            changeImageBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const imageInput = this.parentElement.querySelector('.image-input');
+                    imageInput.click();
+                });
+            });
+
+            const imageInputs = document.querySelectorAll('.image-input');
+            imageInputs.forEach(input => {
+                input.addEventListener('change', function(e) {
+                    if (this.files && this.files[0]) {
+                        const reader = new FileReader();
+                        const imgElement = this.parentElement.querySelector('.maquinaria-image');
+                        
+                        reader.onload = function(e) {
+                            if (imgElement) {
+                                imgElement.src = e.target.result;
+                            } else {
+                                const newImg = document.createElement('img');
+                                newImg.src = e.target.result;
+                                newImg.className = 'maquinaria-image';
+                                const noImage = input.parentElement.querySelector('.no-image');
+                                if (noImage) {
+                                    noImage.replaceWith(newImg);
+                                }
+                            }
+                        };
+                        reader.readAsDataURL(this.files[0]);
+                    }
+                });
             });
         });
-    });
     </script>
 {% endblock %}

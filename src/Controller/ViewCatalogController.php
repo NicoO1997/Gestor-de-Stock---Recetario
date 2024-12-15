@@ -56,6 +56,9 @@ class ViewCatalogController extends AbstractController
         if (isset($data['descripcion'])) {
             $maquinaria->setDescripcion($data['descripcion']);
         }
+        if (isset($data['ultimoService'])) {
+            $maquinaria->setUltimoService(new \DateTime($data['ultimoService']));
+        }
 
         if (isset($data['imagen']) && $data['imagen'] !== '') {
             $imageData = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $data['imagen']));
@@ -91,6 +94,7 @@ class ViewCatalogController extends AbstractController
                     'marca' => $maquinaria->getMarca(),
                     'cantidad' => $maquinaria->getCantidad(),
                     'descripcion' => $maquinaria->getDescripcion(),
+                    'ultimoService' => $maquinaria->getUltimoService() ? $maquinaria->getUltimoService()->format('Y-m-d') : null,
                     'imagen' => $maquinaria->getImagen() ? '/uploads/images/' . $maquinaria->getImagen() : null
                 ]
             ]);

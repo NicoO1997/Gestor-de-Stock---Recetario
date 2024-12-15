@@ -52,19 +52,53 @@ class ViewStockController extends AbstractController
         if (!$repuesto) {
             throw $this->createNotFoundException('No se encontró el repuesto');
         }
-
+        
         if (!$this->isCsrfTokenValid('edit'.$id, $request->request->get('_token'))) {
             return $this->json(['message' => 'Token inválido'], Response::HTTP_FORBIDDEN);
         }
-
+        
         try {
-            $repuesto->setNombre($request->request->get('nombre'));
-            $repuesto->setCantidad((int) $request->request->get('cantidad'));
-            $repuesto->setStockMinimo((int) $request->request->get('stockMinimo'));
-            $repuesto->setDescripcion($request->request->get('descripcion'));
-
+            $originalNombre = $repuesto->getNombre();
+            $originalCantidad = $repuesto->getCantidad();
+            $originalStockMinimo = $repuesto->getStockMinimo();
+            $originalDescripcion = $repuesto->getDescripcion();
+            $newNombre = trim($request->request->get('nombre'));
+            $newCantidad = (int) $request->request->get('cantidad');
+            $newStockMinimo = (int) $request->request->get('stockMinimo');
+            $newDescripcion = trim($request->request->get('descripcion'));
+            
+            if (empty($newNombre)) {
+                return $this->json(['message' => 'El nombre no puede estar vacío'], Response::HTTP_BAD_REQUEST);
+            }
+            
+            if (empty($newDescripcion)) {
+                return $this->json(['message' => 'La descripción no puede estar vacía'], Response::HTTP_BAD_REQUEST);
+            }
+            
+            if ($newCantidad < 0) {
+                return $this->json(['message' => 'La cantidad admite cero o positivos'], Response::HTTP_BAD_REQUEST);
+            }
+            
+            if ($newStockMinimo < 0) {
+                return $this->json(['message' => 'El stock mínimo admite cero o positivos'], Response::HTTP_BAD_REQUEST);
+            }
+            
+            if (
+                $originalNombre === $newNombre && 
+                $originalCantidad === $newCantidad && 
+                $originalStockMinimo === $newStockMinimo && 
+                $originalDescripcion === $newDescripcion
+            ) {
+                return $this->json(['message' => 'No se han detectado cambios'], Response::HTTP_OK);
+            }
+            
+            $repuesto->setNombre($newNombre);
+            $repuesto->setCantidad($newCantidad);
+            $repuesto->setStockMinimo($newStockMinimo);
+            $repuesto->setDescripcion($newDescripcion);
+            
             $entityManager->flush();
-
+            
             return $this->json(['message' => 'Cambios guardados correctamente']);
         } catch (\Exception $e) {
             return $this->json(['message' => $e->getMessage()], Response::HTTP_BAD_REQUEST);

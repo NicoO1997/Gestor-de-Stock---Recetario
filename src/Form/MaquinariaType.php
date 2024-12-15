@@ -9,6 +9,8 @@ use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Form\Extension\Core\Type\DateType;
+use Symfony\Component\Validator\Constraints\LessThanOrEqual;
 
 class MaquinariaType extends AbstractType
 {
@@ -30,10 +32,18 @@ class MaquinariaType extends AbstractType
             ->add('aniosUso', IntegerType::class, [
                 'label' => 'Años de uso',
             ])
-            ->add('ultimoService', null, [
+            ->add('ultimoService', DateType::class, [
                 'widget' => 'single_text',
-                'label' => 'Último service (opcional)',
                 'required' => false,
+                'constraints' => [
+                    new LessThanOrEqual([
+                        'value' => 'today',
+                        'message' => 'La fecha no puede ser futura'
+                    ])
+                ],
+                'attr' => [
+                    'max' => (new \DateTime())->format('Y-m-d')
+                ]
             ])
             ->add('imagen', FileType::class, [
                 'label' => 'Imagen de la maquinaria (opcional)',

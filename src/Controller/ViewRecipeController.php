@@ -30,8 +30,8 @@ class ViewRecipeController extends AbstractController
     public function getRepuestosList(RepuestosRepository $repuestosRepository): JsonResponse
     {
         $repuestos = $repuestosRepository->findAll();
-        
-        $repuestosData = array_map(function($repuesto) {
+
+        $repuestosData = array_map(function ($repuesto) {
             return [
                 'id' => $repuesto->getId(),
                 'nombre' => $repuesto->getNombre(),
@@ -52,28 +52,40 @@ class ViewRecipeController extends AbstractController
         $receta = new Receta();
         $form = $this->createForm(RecetaType::class, $receta);
         $form->handleRequest($request);
-    
+
         if ($form->isSubmitted() && $form->isValid()) {
             $repuestosSeleccionados = $request->request->all('repuestos_selected');
             $repuestosCantidad = $request->request->all('repuestos_cantidad');
-    
+
+            $hasValidRepuestos = false;
+
             foreach ($repuestosSeleccionados as $repuestoId => $value) {
                 $repuesto = $repuestosRepository->find($repuestoId);
-                if ($repuesto) {
-                    $cantidad = isset($repuestosCantidad[$repuestoId]) ? 
-                               (int)$repuestosCantidad[$repuestoId] : 1;
-                               
+                $cantidad = isset($repuestosCantidad[$repuestoId]) ?
+                    (int)$repuestosCantidad[$repuestoId] : 0;
+
+                if ($repuesto && !empty($value) && $cantidad > 0) {
                     $receta->addRepuestoConCantidad($repuesto, $cantidad);
+                    $hasValidRepuestos = true;
                 }
             }
-    
+            
+            if (!$hasValidRepuestos) {
+                $this->addFlash('error', 'Debe seleccionar al menos un repuesto con cantidad mayor a cero.');
+                return $this->render('view_recipe/create_recipe.html.twig', [
+                    'form' => $form->createView(),
+                    'maquinarias' => $maquinariaRepository->findAll(),
+                    'repuestos' => $repuestosRepository->findAll(),
+                ]);
+            }
+
             $entityManager->persist($receta);
             $entityManager->flush();
-    
+
             $this->addFlash('receta_success', 'Receta creada con éxito.');
             return $this->redirectToRoute('receta_index');
         }
-    
+
         return $this->render('view_recipe/create_recipe.html.twig', [
             'form' => $form->createView(),
             'maquinarias' => $maquinariaRepository->findAll(),
@@ -83,17 +95,17 @@ class ViewRecipeController extends AbstractController
 
     #[Route('/{id}/edit', name: 'receta_edit', methods: ['GET', 'POST'])]
     public function edit(
-        Request $request, 
-        Receta $receta, 
+        Request $request,
+        Receta $receta,
         EntityManagerInterface $entityManager,
-        MaquinariaRepository $maquinariaRepository, 
+        MaquinariaRepository $maquinariaRepository,
         RepuestosRepository $repuestosRepository
     ): Response {
         $form = $this->createForm(RecetaType::class, $receta);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $receta->getMaquinarias()->clear(); 
+            $receta->getMaquinarias()->clear();
             $maquinariasSeleccionadas = $request->request->all('maquinarias');
             foreach ($maquinariasSeleccionadas as $maquinariaId) {
                 $maquinaria = $maquinariaRepository->find($maquinariaId);
@@ -154,14 +166,14 @@ class ViewRecipeController extends AbstractController
 
     #[Route('/{id}/update', name: 'receta_update', methods: ['POST', 'OPTIONS'])]
     public function update(
-        Request $request, 
+        Request $request,
         int $id,
         RecetaRepository $recetaRepository,
         EntityManagerInterface $entityManager,
         RepuestosRepository $repuestosRepository
     ): JsonResponse {
         $receta = $recetaRepository->find($id);
-        
+
         if (!$receta) {
             return new JsonResponse(['success' => false, 'message' => 'Receta no encontrada'], 404);
         }
@@ -200,12 +212,11 @@ class ViewRecipeController extends AbstractController
             }
 
             $entityManager->flush();
-            
+
             return new JsonResponse([
                 'success' => true,
                 'message' => 'Receta actualizada correctamente'
             ]);
-
         } catch (\Exception $e) {
             return new JsonResponse([
                 'success' => false,
