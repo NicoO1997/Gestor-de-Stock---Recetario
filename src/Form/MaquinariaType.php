@@ -11,6 +11,8 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Validator\Constraints\LessThanOrEqual;
+use Symfony\Component\Validator\Constraints\Range;
+use Symfony\Component\Validator\Constraints as Assert;
 
 class MaquinariaType extends AbstractType
 {
@@ -27,13 +29,26 @@ class MaquinariaType extends AbstractType
                 'label' => 'Descripción',
             ])
             ->add('cantidad', IntegerType::class, [
-                'label' => 'Cantidad disponible',
+                'label' => 'Meses de uso',
+                'attr' => [
+                    'class' => 'form-control',
+                    'min' => '0',
+                    'max' => '11',
+                    'type' => 'number',
+                    'message' => 'Admite valores entre 0 y 11'
+                ]
             ])
             ->add('aniosUso', IntegerType::class, [
                 'label' => 'Años de uso',
+                'attr' => [
+                    'class' => 'form-control',
+                    'min' => '0',
+                    'type' => 'number'
+                ]
             ])
             ->add('ultimoService', DateType::class, [
                 'widget' => 'single_text',
+                'label' => 'Ultimo service (opcional)',
                 'required' => false,
                 'constraints' => [
                     new LessThanOrEqual([

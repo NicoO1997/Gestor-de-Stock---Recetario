@@ -1,289 +1,315 @@
 {% extends 'base.html.twig' %}
+
 {% block title %}Recetas{% endblock %}
+
 {% block stylesheets %}
+    {{ parent() }}
     <link rel="stylesheet" href="{{ asset('styles/view_recipe.css') }}">
 {% endblock %}
 
 {% block body %}
     <div class="container">
         <h1>Lista de Recetas</h1>
-    <table>
-        <thead>
-            <tr>
-                <th>Maquinaria</th>
-                <th>Descripción</th>
-                <th>Repuestos y Cantidades</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for receta in recetas %}
-                <tr data-receta-id="{{ receta.id }}">
-                    <td>
-                        <input type="text" id="nombre_{{ receta.id }}" value="{{ receta.nombre }}" disabled>
-                    </td>
-                    <td>
-                        <input type="text" id="descripcion_{{ receta.id }}" value="{{ receta.descripcion }}" disabled>
-                    </td>
-                    <td>
-                        <ul class="repuestos-list">
-                            {% if receta.recetaRepuestos|length > 0 %}
-                                {% for recetaRepuesto in receta.recetaRepuestos %}
-                                    <li>
-                                        <input type="hidden" 
-                                               id="repuesto_id_{{ receta.id }}_{{ recetaRepuesto.repuesto.id }}" 
-                                               value="{{ recetaRepuesto.repuesto.id }}">
-                                        <input type="text" 
-                                               id="repuesto_nombre_{{ receta.id }}_{{ recetaRepuesto.repuesto.id }}" 
-                                               value="{{ recetaRepuesto.repuesto.nombre }}" 
-                                               disabled>
-                                        <input type="number" 
-                                               id="repuesto_cantidad_{{ receta.id }}_{{ recetaRepuesto.repuesto.id }}" 
-                                               value="{{ recetaRepuesto.cantidad }}" 
-                                               disabled>
-                                    </li>
-                                {% endfor %}
-                            {% else %}
-                                <li>No hay repuestos asociados</li>
-                            {% endif %}
-                        </ul>
-                    </td>
-                    <td>
-                        <button class="action-button edit-button" onclick="enableEdit({{ receta.id }})">Editar</button>
-                        <form method="post" action="{{ path('receta_delete', {'id': receta.id}) }}" style="display: inline;" onsubmit="return confirm('¿Estás seguro?');">
-                            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ receta.id) }}">
-                            <button type="submit" class="action-button delete-button">Eliminar</button>
-                        </form>
-                        <input type="hidden" id="csrf_token_{{ receta.id }}" value="{{ csrf_token('update' ~ receta.id) }}">
-                    </td>
+        <table>
+            <thead>
+                <tr>
+                    <th>Maquinaria</th>
+                    <th>Descripción</th>
+                    <th>Repuestos y Cantidades</th>
+                    <th>Acciones</th>
                 </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    <div class="create-button">
-        <a href="{{ path('receta_new') }}">Crear nueva receta</a>
+            </thead>
+            <tbody>
+                {% for receta in recetas %}
+                    <tr data-receta-id="{{ receta.id }}">
+                        <td>
+                            <input type="text" id="nombre_{{ receta.id }}" value="{{ receta.nombre }}" disabled>
+                        </td>
+                        <td>
+                            <input type="text" id="descripcion_{{ receta.id }}" value="{{ receta.descripcion }}" disabled>
+                        </td>
+                        <td>
+                            <ul class="repuestos-list">
+                                {% if receta.recetaRepuestos|length > 0 %}
+                                    {% for recetaRepuesto in receta.recetaRepuestos %}
+                                        <li>
+                                            <input type="hidden" 
+                                                id="repuesto_id_{{ receta.id }}_{{ recetaRepuesto.repuesto.id }}" 
+                                                value="{{ recetaRepuesto.repuesto.id }}">
+                                            <input type="text" 
+                                                id="repuesto_nombre_{{ receta.id }}_{{ recetaRepuesto.repuesto.id }}" 
+                                                value="{{ recetaRepuesto.repuesto.nombre }}" 
+                                                disabled>
+                                            <input type="number" 
+                                                id="repuesto_cantidad_{{ receta.id }}_{{ recetaRepuesto.repuesto.id }}" 
+                                                value="{{ recetaRepuesto.cantidad }}" 
+                                                disabled>
+                                        </li>
+                                    {% endfor %}
+                                {% else %}
+                                    <li>No hay repuestos asociados</li>
+                                {% endif %}
+                            </ul>
+                        </td>
+                        <td>
+                            <button class="action-button edit-button">Editar</button>
+                            <form method="post" action="{{ path('receta_delete', {'id': receta.id}) }}" style="display: inline;" onsubmit="return confirm('¿Estás seguro?');">
+                                <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ receta.id) }}">
+                                <button type="submit" class="action-button delete-button">Eliminar</button>
+                            </form>
+                            <input type="hidden" id="csrf_token_{{ receta.id }}" value="{{ csrf_token('update' ~ receta.id) }}">
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="create-button">
+            <a href="{{ path('receta_new') }}">Crear nueva receta</a>
+        </div>
     </div>
-</div>
 {% endblock %}
 
 {% block javascripts %}
     {{ parent() }}
-   <script>
-function enableEdit(recetaId) {
-    const row = document.querySelector(`tr[data-receta-id="${recetaId}"]`);
-    if (!row) {
-        console.error('No se encontró la fila:', recetaId);
-        return;
-    }
-
-    const nombreInput = document.getElementById(`nombre_${recetaId}`);
-    const descripcionInput = document.getElementById(`descripcion_${recetaId}`);
-    const editButton = row.querySelector('.edit-button');
-    const repuestosContainer = row.querySelector('.repuestos-list');
-
-    let originalState = null;
-
-    if (nombreInput.disabled) {
-        originalState = {
-            nombre: nombreInput.value,
-            descripcion: descripcionInput.value,
-            repuestos: Array.from(repuestosContainer.querySelectorAll('li')).map(li => {
-                const idInput = li.querySelector('input[type="hidden"]');
-                const cantidadInput = li.querySelector('input[type="number"]');
-                if (idInput && cantidadInput) {
-                    return {
-                        repuestoId: parseInt(idInput.value, 10),
-                        cantidad: parseInt(cantidadInput.value, 10)
-                    };
-                }
-                return null;
-            }).filter(item => item !== null)
-        };
-
-        nombreInput.disabled = false;
-        descripcionInput.disabled = false;
-        editButton.textContent = 'Guardar';
-        
-        const stateInput = document.createElement('input');
-        stateInput.type = 'hidden';
-        stateInput.id = `original_state_${recetaId}`;
-        stateInput.value = JSON.stringify(originalState);
-        row.appendChild(stateInput);
-        
-        const baseUrl = window.location.pathname.split('/receta')[0];
-        
-        fetch(`${baseUrl}/receta/repuestos-list`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Error en la respuesta del servidor');
-                }
-                return response.json();
-            })
-            .then(repuestos => {
-                repuestosContainer.innerHTML = '';
-                
-                const listContainer = document.createElement('div');
-                listContainer.className = 'repuestos-edit-container';
-                listContainer.style.cssText = `
-                    background-color: #c7d3db;
-                    padding: 10px;
-                    border-radius: 5px;
-                    margin-top: 10px;
-                    max-height: 300px;
-                    overflow-y: auto;
-                `;
-
-                repuestos.forEach(repuesto => {
-                    const repuestoOriginal = originalState.repuestos.find(r => r.repuestoId === repuesto.id);
-                    
-                    const repuestoDiv = document.createElement('div');
-                    repuestoDiv.className = 'repuesto-item';
-                    repuestoDiv.style.cssText = `
-                        display: flex;
-                        align-items: center;
-                        margin-bottom: 8px;
-                        padding: 5px;
-                        background-color: rgba(255, 255, 255, 0.5);
-                        border-radius: 3px;
-                    `;
-                    
-                    const checkbox = document.createElement('input');
-                    checkbox.type = 'checkbox';
-                    checkbox.id = `repuesto_check_${recetaId}_${repuesto.id}`;
-                    checkbox.checked = !!repuestoOriginal;
-                    checkbox.style.marginRight = '8px';
-                    
-                    const label = document.createElement('label');
-                    label.htmlFor = checkbox.id;
-                    label.textContent = repuesto.nombre;
-                    label.style.cssText = `
-                        margin-right: 15px;
-                        flex: 1;
-                        font-weight: 500;
-                    `;
-                    
-                    const cantidadInput = document.createElement('input');
-                    cantidadInput.type = 'number';
-                    cantidadInput.className = 'cantidad-input';
-                    cantidadInput.value = repuestoOriginal ? repuestoOriginal.cantidad : 0;
-                    cantidadInput.min = '0';
-                    cantidadInput.style.cssText = `
-                        width: 80px;
-                        padding: 3px;
-                        border: 1px solid #ccc;
-                        border-radius: 3px;
-                    `;
-                    
-                    const stockSpan = document.createElement('span');
-                    stockSpan.textContent = ` (Stock: ${repuesto.stock})`;
-                    stockSpan.style.marginLeft = '10px';
-                    stockSpan.style.color = '#555';
-                    
-                    const idInput = document.createElement('input');
-                    idInput.type = 'hidden';
-                    idInput.value = repuesto.id;
-                    
-                    repuestoDiv.appendChild(checkbox);
-                    repuestoDiv.appendChild(label);
-                    repuestoDiv.appendChild(cantidadInput);
-                    repuestoDiv.appendChild(stockSpan);
-                    repuestoDiv.appendChild(idInput);
-                    
-                    listContainer.appendChild(repuestoDiv);
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Agregar event listeners a todos los botones de editar
+            document.querySelectorAll('.edit-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    const recetaId = this.closest('tr').dataset.recetaId;
+                    enableEdit(recetaId);
                 });
-
-                repuestosContainer.appendChild(listContainer);
-            })
-            .catch(error => {
-                console.error('Error al cargar repuestos:', error);
-                alert('Error al cargar la lista de repuestos: ' + error.message);
             });
+        });
 
-        nombreInput.focus();
-    } else {
-        const csrfToken = document.getElementById(`csrf_token_${recetaId}`).value;
-        
-        const originalStateInput = document.getElementById(`original_state_${recetaId}`);
-        const originalState = JSON.parse(originalStateInput.value);
-        
-        const currentState = {
-            nombre: nombreInput.value,
-            descripcion: descripcionInput.value,
-            repuestos: Array.from(repuestosContainer.querySelectorAll('.repuesto-item'))
-                .filter(div => {
-                    const checkbox = div.querySelector('input[type="checkbox"]');
-                    const cantidadInput = div.querySelector('input[type="number"]');
-                    return checkbox.checked && parseInt(cantidadInput.value, 10) > 0;
+        function enableEdit(recetaId) {
+            const row = document.querySelector(`tr[data-receta-id="${recetaId}"]`);
+            if (!row) {
+                console.error('No se encontró la fila:', recetaId);
+                return;
+            }
+
+            const nombreInput = document.getElementById(`nombre_${recetaId}`);
+            const descripcionInput = document.getElementById(`descripcion_${recetaId}`);
+            const editButton = row.querySelector('.edit-button');
+            const repuestosContainer = row.querySelector('.repuestos-list');
+
+            let originalState = null;
+
+            if (nombreInput.disabled) {
+                originalState = {
+                    nombre: nombreInput.value,
+                    descripcion: descripcionInput.value,
+                    repuestos: Array.from(repuestosContainer.querySelectorAll('li')).map(li => {
+                        const idInput = li.querySelector('input[type="hidden"]');
+                        const cantidadInput = li.querySelector('input[type="number"]');
+                        if (idInput && cantidadInput) {
+                            return {
+                                repuestoId: parseInt(idInput.value, 10),
+                                cantidad: parseInt(cantidadInput.value, 10)
+                            };
+                        }
+                        return null;
+                    }).filter(item => item !== null)
+                };
+
+                nombreInput.disabled = false;
+                descripcionInput.disabled = false;
+                editButton.textContent = 'Guardar';
+                
+                const stateInput = document.createElement('input');
+                stateInput.type = 'hidden';
+                stateInput.id = `original_state_${recetaId}`;
+                stateInput.value = JSON.stringify(originalState);
+                row.appendChild(stateInput);
+                
+                const baseUrl = window.location.pathname.split('/receta')[0];
+                
+                fetch(`${baseUrl}/receta/repuestos-list`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Error en la respuesta del servidor');
+                        }
+                        return response.json();
+                    })
+                    .then(repuestos => {
+                        repuestosContainer.innerHTML = '';
+                        
+                        const listContainer = document.createElement('div');
+                        listContainer.className = 'repuestos-edit-container';
+                        listContainer.style.cssText = `
+                            background-color: #c7d3db;
+                            padding: 10px;
+                            border-radius: 5px;
+                            margin-top: 10px;
+                            max-height: 300px;
+                            overflow-y: auto;
+                        `;
+
+                        repuestos.forEach(repuesto => {
+                            const repuestoOriginal = originalState.repuestos.find(r => r.repuestoId === repuesto.id);
+                            
+                            const repuestoDiv = document.createElement('div');
+                            repuestoDiv.className = 'repuesto-item';
+                            repuestoDiv.style.cssText = `
+                                display: flex;
+                                align-items: center;
+                                margin-bottom: 8px;
+                                padding: 5px;
+                                background-color: rgba(255, 255, 255, 0.5);
+                                border-radius: 3px;
+                            `;
+                            
+                            const checkbox = document.createElement('input');
+                            checkbox.type = 'checkbox';
+                            checkbox.id = `repuesto_check_${recetaId}_${repuesto.id}`;
+                            checkbox.checked = !!repuestoOriginal;
+                            checkbox.style.marginRight = '8px';
+                            
+                            const label = document.createElement('label');
+                            label.htmlFor = checkbox.id;
+                            label.textContent = repuesto.nombre;
+                            label.style.cssText = `
+                                margin-right: 15px;
+                                flex: 1;
+                                font-weight: 500;
+                            `;
+                            
+                            const cantidadInput = document.createElement('input');
+                            cantidadInput.type = 'number';
+                            cantidadInput.className = 'cantidad-input';
+                            cantidadInput.value = repuestoOriginal ? repuestoOriginal.cantidad : 0;
+                            cantidadInput.min = '0';
+                            cantidadInput.style.cssText = `
+                                width: 80px;
+                                padding: 3px;
+                                border: 1px solid #ccc;
+                                border-radius: 3px;
+                            `;
+                            
+                            const stockSpan = document.createElement('span');
+                            stockSpan.textContent = ` (Stock: ${repuesto.stock})`;
+                            stockSpan.style.marginLeft = '10px';
+                            stockSpan.style.color = '#555';
+                            
+                            const idInput = document.createElement('input');
+                            idInput.type = 'hidden';
+                            idInput.value = repuesto.id;
+                            
+                            repuestoDiv.appendChild(checkbox);
+                            repuestoDiv.appendChild(label);
+                            repuestoDiv.appendChild(cantidadInput);
+                            repuestoDiv.appendChild(stockSpan);
+                            repuestoDiv.appendChild(idInput);
+                            
+                            listContainer.appendChild(repuestoDiv);
+                        });
+
+                        repuestosContainer.appendChild(listContainer);
+                    })
+                    .catch(error => {
+                        console.error('Error al cargar repuestos:', error);
+                        alert('Error al cargar la lista de repuestos: ' + error.message);
+                    });
+
+                nombreInput.focus();
+            } else {
+                // Validación de campos vacíos
+                if (!nombreInput.value.trim()) {
+                    alert('El campo Maquinaria no puede estar vacío');
+                    nombreInput.focus();
+                    return;
+                }
+
+                if (!descripcionInput.value.trim()) {
+                    alert('El campo Descripción no puede estar vacío');
+                    descripcionInput.focus();
+                    return;
+                }
+
+                const csrfToken = document.getElementById(`csrf_token_${recetaId}`).value;
+                
+                const originalStateInput = document.getElementById(`original_state_${recetaId}`);
+                const originalState = JSON.parse(originalStateInput.value);
+                
+                const currentState = {
+                    nombre: nombreInput.value.trim(),
+                    descripcion: descripcionInput.value.trim(),
+                    repuestos: Array.from(repuestosContainer.querySelectorAll('.repuesto-item'))
+                        .filter(div => {
+                            const checkbox = div.querySelector('input[type="checkbox"]');
+                            const cantidadInput = div.querySelector('input[type="number"]');
+                            return checkbox.checked && parseInt(cantidadInput.value, 10) > 0;
+                        })
+                        .map(div => ({
+                            repuestoId: parseInt(div.querySelector('input[type="hidden"]').value, 10),
+                            cantidad: parseInt(div.querySelector('input[type="number"]').value, 10)
+                        }))
+                };
+
+                const hasNameChanged = currentState.nombre !== originalState.nombre;
+                const hasDescriptionChanged = currentState.descripcion !== originalState.descripcion;
+                
+                const sortedOriginalRepuestos = originalState.repuestos.sort((a, b) => a.repuestoId - b.repuestoId);
+                const sortedCurrentRepuestos = currentState.repuestos.sort((a, b) => a.repuestoId - b.repuestoId);
+                const hasRepuestosChanged = JSON.stringify(sortedCurrentRepuestos) !== JSON.stringify(sortedOriginalRepuestos);
+
+                if (!hasNameChanged && !hasDescriptionChanged && !hasRepuestosChanged) {
+                    alert('No se detectaron cambios.');
+                    nombreInput.disabled = true;
+                    descripcionInput.disabled = true;
+                    editButton.textContent = 'Editar';
+                    originalStateInput.remove();
+                    location.reload();
+                    return;
+                }
+
+                const data = {
+                    nombre: currentState.nombre,
+                    descripcion: currentState.descripcion,
+                    repuestos: currentState.repuestos
+                };
+                
+                const basePath = window.location.pathname.replace(/\/+$/, '');
+                const updateUrl = `${basePath}/${recetaId}/update`.replace(/\/+/g, '/');
+
+                fetch(updateUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body: JSON.stringify(data)
                 })
-                .map(div => ({
-                    repuestoId: parseInt(div.querySelector('input[type="hidden"]').value, 10),
-                    cantidad: parseInt(div.querySelector('input[type="number"]').value, 10)
-                }))
-        };
-
-        const hasNameChanged = currentState.nombre !== originalState.nombre;
-        const hasDescriptionChanged = currentState.descripcion !== originalState.descripcion;
-        
-        const sortedOriginalRepuestos = originalState.repuestos.sort((a, b) => a.repuestoId - b.repuestoId);
-        const sortedCurrentRepuestos = currentState.repuestos.sort((a, b) => a.repuestoId - b.repuestoId);
-        const hasRepuestosChanged = JSON.stringify(sortedCurrentRepuestos) !== JSON.stringify(sortedOriginalRepuestos);
-
-        if (!hasNameChanged && !hasDescriptionChanged && !hasRepuestosChanged) {
-            alert('No se detectaron cambios.');
-            nombreInput.disabled = true;
-            descripcionInput.disabled = true;
-            editButton.textContent = 'Editar';
-            originalStateInput.remove();
-            location.reload();
-            return;
-        }
-
-        const data = {
-            nombre: currentState.nombre,
-            descripcion: currentState.descripcion,
-            repuestos: currentState.repuestos
-        };
-        
-        const basePath = window.location.pathname.replace(/\/+$/, '');
-        const updateUrl = `${basePath}/${recetaId}/update`.replace(/\/+/g, '/');
-
-        fetch(updateUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken
-            },
-            body: JSON.stringify(data)
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.text().then(text => {
-                    throw new Error(`Error del servidor: ${response.status}`);
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            throw new Error(`Error del servidor: ${response.status}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        nombreInput.disabled = true;
+                        descripcionInput.disabled = true;
+                        editButton.textContent = 'Editar';
+                        originalStateInput.remove();
+                        alert('Receta actualizada con éxito');
+                        location.reload();
+                    } else {
+                        throw new Error(data.message || 'Error desconocido en la actualización');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error en la actualización:', error);
+                    alert(`Error: ${error.message}`);
+                    nombreInput.disabled = true;
+                    descripcionInput.disabled = true;
+                    editButton.textContent = 'Editar';
+                    originalStateInput.remove();
                 });
             }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                nombreInput.disabled = true;
-                descripcionInput.disabled = true;
-                editButton.textContent = 'Editar';
-                originalStateInput.remove();
-                alert('Actualización exitosa');
-                location.reload();
-            } else {
-                throw new Error(data.message || 'Error desconocido en la actualización');
-            }
-        })
-        .catch(error => {
-            console.error('Error en la actualización:', error);
-            alert(`Error: ${error.message}`);
-            nombreInput.disabled = true;
-            descripcionInput.disabled = true;
-            editButton.textContent = 'Editar';
-            originalStateInput.remove();
-        });
-    }
-}
-</script>
+        }
+    </script>
 {% endblock %}

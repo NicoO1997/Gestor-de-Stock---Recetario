@@ -43,26 +43,42 @@ class ViewCatalogController extends AbstractController
         }
 
         $data = json_decode($request->getContent(), true);
+        $changed = false;
 
-        if (isset($data['nombre'])) {
+        if (isset($data['nombre']) && $data['nombre'] !== $maquinaria->getNombre()) {
             $maquinaria->setNombre($data['nombre']);
+            $changed = true;
         }
-        if (isset($data['marca'])) {
+
+        if (isset($data['marca']) && $data['marca'] !== $maquinaria->getMarca()) {
             $maquinaria->setMarca($data['marca']);
+            $changed = true;
         }
-        if (isset($data['cantidad'])) {
+
+        if (isset($data['cantidad']) && (int)$data['cantidad'] !== $maquinaria->getCantidad()) {
             $maquinaria->setCantidad((int)$data['cantidad']);
+            $changed = true;
         }
-        if (isset($data['descripcion'])) {
+
+        if (isset($data['aniosUso']) && 
+        (($data['aniosUso'] === null && $maquinaria->getAniosUso() !== null) || 
+        ($data['aniosUso'] !== null && $maquinaria->getAniosUso() !== $data['aniosUso']))) {
+        $maquinaria->setAniosUso($data['aniosUso']);
+        $changed = true;
+        }
+
+        if (isset($data['descripcion']) && $data['descripcion'] !== $maquinaria->getDescripcion()) {
             $maquinaria->setDescripcion($data['descripcion']);
+            $changed = true;
         }
-        if (isset($data['ultimoService'])) {
+
+        if (isset($data['ultimoService']) && $data['ultimoService'] !== $maquinaria->getUltimoService()?->format('Y-m-d')) {
             $maquinaria->setUltimoService(new \DateTime($data['ultimoService']));
+            $changed = true;
         }
 
         if (isset($data['imagen']) && $data['imagen'] !== '') {
             $imageData = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $data['imagen']));
-
             $extension = $this->getImageExtension($data['imagen']);
             $filename = uniqid() . '.' . $extension;
 
@@ -82,7 +98,12 @@ class ViewCatalogController extends AbstractController
 
                 $timestamp = time();
                 $maquinaria->setImagen($filename . '?v=' . $timestamp);
+                $changed = true;
             }
+        }
+
+        if (!$changed) {
+            return new JsonResponse(['message' => 'No se han detectado cambios'], 200);
         }
 
         try {
@@ -93,6 +114,7 @@ class ViewCatalogController extends AbstractController
                     'nombre' => $maquinaria->getNombre(),
                     'marca' => $maquinaria->getMarca(),
                     'cantidad' => $maquinaria->getCantidad(),
+                    'aniosUso' => $maquinaria->getAniosUso(),
                     'descripcion' => $maquinaria->getDescripcion(),
                     'ultimoService' => $maquinaria->getUltimoService() ? $maquinaria->getUltimoService()->format('Y-m-d') : null,
                     'imagen' => $maquinaria->getImagen() ? '/uploads/images/' . $maquinaria->getImagen() : null
@@ -115,7 +137,7 @@ class ViewCatalogController extends AbstractController
     {
         if ($this->isCsrfTokenValid('delete' . $maquinaria->getId(), $request->request->get('_token'))) {
             if ($maquinaria->getImagen()) {
-                $imagePath = $this->getParameter('kernel.project_dir') . '/public/uploads/images/' . 
+                $imagePath = $this->getParameter('kernel.project_dir') . '/public/assets/images/' . 
                             preg_replace('/\?v=\d+$/', '', $maquinaria->getImagen());
                 if (file_exists($imagePath)) {
                     unlink($imagePath);

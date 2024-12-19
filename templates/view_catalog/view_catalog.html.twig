@@ -21,7 +21,8 @@
                         <tr>
                             <th>Nombre</th>
                             <th>Marca</th>
-                            <th>Cantidad</th>
+                            <th>Años</th>
+                            <th>Meses</th>
                             <th>Descripción</th>
                             <th>Último Service</th>
                             <th>Imagen</th>
@@ -33,6 +34,7 @@
                             <tr data-id="{{ maquinaria.id }}">
                                 <td class="editable-cell" data-field="nombre">{{ maquinaria.nombre }}</td>
                                 <td class="editable-cell" data-field="marca">{{ maquinaria.marca }}</td>
+                                <td class="editable-cell" data-field="aniosUso">{{ maquinaria.aniosUso }}</td>
                                 <td class="editable-cell" data-field="cantidad">{{ maquinaria.cantidad }}</td>
                                 <td class="editable-cell" data-field="descripcion">{{ maquinaria.descripcion }}</td>
                                 <td class="editable-cell" data-field="ultimoService">
@@ -86,6 +88,45 @@
 {% block javascripts %}
     {{ parent() }}
     <script>
+        function showAlert(type, message) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type}`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" onclick="this.parentElement.remove();">&times;</button>
+        `;
+        
+        document.body.appendChild(alertDiv);
+
+        setTimeout(() => {
+            if (alertDiv.parentElement) {
+                alertDiv.remove();
+            }
+        }, 3000);
+    }
+
+        function revertChanges(row) {
+            const cells = row.querySelectorAll('.editable-cell');
+            cells.forEach(cell => {
+                if (cell.dataset.field === 'ultimoService' && cell.dataset.originalDate) {
+                    cell.textContent = cell.dataset.originalDate;
+                } else {
+                    cell.textContent = cell.dataset.originalValue || '';
+                }
+                cell.setAttribute('contenteditable', 'false');
+                cell.classList.remove('editing');
+            });
+        }
+
+        async function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+
         function toggleEditing(row) {
             const cells = row.querySelectorAll('.editable-cell');
             const editBtn = row.querySelector('.edit-btn');
@@ -104,8 +145,16 @@
                     
                     if (cell.dataset.field === 'ultimoService') {
                         const currentValue = cell.textContent.trim();
-                        const today = new Date().toISOString().split('T')[0];
-                        cell.innerHTML = `<input type="date" value="${currentValue}" max="${today}" class="form-control">`;
+                        if (currentValue) {
+                            cell.dataset.originalDate = currentValue;
+                            const dateInput = document.createElement('input');
+                            dateInput.type = 'date';
+                            dateInput.value = currentValue;
+                            dateInput.className = 'form-control';
+                            dateInput.max = new Date().toISOString().split('T')[0];
+                            cell.innerHTML = '';
+                            cell.appendChild(dateInput);
+                        }
                     }
                 }
             });
@@ -120,74 +169,112 @@
         }
 
         async function saveChanges(row) {
-            const editUrl = row.querySelector('.edit-url').value;
-            const csrfToken = row.querySelector('.csrf-token').value;
-            const imageInput = row.querySelector('.image-input');
+        const nombre = row.querySelector('[data-field="nombre"]').textContent.trim();
+        const marca = row.querySelector('[data-field="marca"]').textContent.trim();
+        const cantidadCell = row.querySelector('[data-field="cantidad"]');
+        const aniosUsoCell = row.querySelector('[data-field="aniosUso"]');
+        const descripcion = row.querySelector('[data-field="descripcion"]').textContent.trim();
+        const ultimoServiceCell = row.querySelector('[data-field="ultimoService"]');
+        const imageInput = row.querySelector('.image-input');
+        
+        if (!nombre) {
+            showAlert('danger', 'El campo Nombre no puede estar vacío');
+            return;
+        }
+        if (!marca) {
+            showAlert('danger', 'El campo Marca no puede estar vacío');
+            return;
+        }
+        if (!descripcion) {
+            showAlert('danger', 'El campo Descripción no puede estar vacío');
+            return;
+        }
 
-            const data = {
-                nombre: row.querySelector('[data-field="nombre"]').textContent.trim(),
-                marca: row.querySelector('[data-field="marca"]').textContent.trim(),
-                cantidad: row.querySelector('[data-field="cantidad"]').textContent.trim(),
-                descripcion: row.querySelector('[data-field="descripcion"]').textContent.trim()
-            };
+        const data = {
+            nombre: nombre,
+            marca: marca,
+            descripcion: descripcion
+        };
 
-            const ultimoServiceCell = row.querySelector('[data-field="ultimoService"]');
-            const dateInput = ultimoServiceCell.querySelector('input[type="date"]');
-            if (dateInput) {
-                const today = new Date().toISOString().split('T')[0];
-                if (dateInput.value > today) {
-                    showAlert('danger', 'La fecha de último service no puede ser futura');
-                    return;
-                }
-                data.ultimoService = dateInput.value;
-            }
+        const aniosUso = aniosUsoCell.textContent.trim();
+        const aniosUsoNum = parseInt(aniosUso, 10);
+        if (isNaN(aniosUsoNum) || aniosUsoNum < 0) {
+            showAlert('danger', 'Los Años no pueden ser negativos');
+            return;
+        }
+        data.aniosUso = aniosUsoNum;
 
-            if (imageInput && imageInput.files.length > 0) {
-                try {
-                    data.imagen = await fileToBase64(imageInput.files[0]);
-                } catch (error) {
-                    showAlert('danger', 'Error al procesar la imagen');
-                    return;
-                }
-            }
+        const cantidad = cantidadCell.textContent.trim();
+        const cantidadNum = parseInt(cantidad, 10);
+        if (isNaN(cantidadNum) || cantidadNum < 0 || cantidadNum > 11) {
+            showAlert('danger', 'La Cantidad (Meses) debe estar entre 0 y 11');
+            return;
+        }
+        data.cantidad = cantidadNum;
 
-            try {
-                const response = await fetch(editUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken
-                    },
-                    body: JSON.stringify(data)
-                });
-
-                const result = await response.json();
-
-                if (response.ok) {
-                    toggleEditing(row);
-                    showAlert('success', 'Maquinaria actualizada correctamente');
-                    
-                    if (data.ultimoService) {
-                        ultimoServiceCell.textContent = data.ultimoService;
-                    }
-
-                    setTimeout(() => {
-                        location.reload(true);
-                    }, 500);
-                } else {
-                    revertChanges(row);
-                    showAlert('danger', result.error || 'Error al actualizar la maquinaria');
-                }
-            } catch (error) {
-                revertChanges(row);
-                showAlert('danger', 'Error de conexión');
-                console.error('Error:', error);
+        let changed = false;
+        const dateInput = ultimoServiceCell.querySelector('input[type="date"]');
+        if (dateInput) {
+            const newDate = dateInput.value;
+            const originalDate = ultimoServiceCell.dataset.originalDate;
+            
+            if (newDate !== originalDate) {
+                data.ultimoService = newDate;
+                changed = true;
             }
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            const today = new Date().toISOString().split('T')[0];
+        if (imageInput && imageInput.files.length > 0) {
+            const base64Image = await fileToBase64(imageInput.files[0]);
+            data.imagen = base64Image;
+            changed = true;
+        }
 
+        changed = changed || 
+            nombre !== row.querySelector('[data-field="nombre"]').dataset.originalValue ||
+            marca !== row.querySelector('[data-field="marca"]').dataset.originalValue ||
+            aniosUso !== row.querySelector('[data-field="aniosUso"]').dataset.originalValue ||
+            cantidad !== row.querySelector('[data-field="cantidad"]').dataset.originalValue ||
+            descripcion !== row.querySelector('[data-field="descripcion"]').dataset.originalValue;
+
+        if (!changed) {
+            showAlert('info', 'No se han detectado cambios');
+            revertChanges(row);
+            setTimeout(() => location.reload(), 2000);
+            return;
+        }
+
+        const editUrl = row.querySelector('.edit-url').value;
+        const csrfToken = row.querySelector('.csrf-token').value;
+
+        try {
+            const response = await fetch(editUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                toggleEditing(row);
+                showAlert('success', 'Maquinaria actualizada correctamente');
+                setTimeout(() => location.reload(true), 500);
+            } else {
+                revertChanges(row);
+                showAlert('danger', result.error || 'Error al actualizar la maquinaria');
+            }
+        } catch (error) {
+            revertChanges(row);
+            showAlert('danger', 'Error de conexión');
+            console.error('Error:', error);
+        }
+    }
+
+        document.addEventListener('DOMContentLoaded', function() {
             const changeImageBtns = document.querySelectorAll('.change-image-btn');
             changeImageBtns.forEach(btn => {
                 btn.addEventListener('click', function() {

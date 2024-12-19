@@ -6,6 +6,7 @@ use App\Repository\MaquinariaRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: MaquinariaRepository::class)]
 class Maquinaria
@@ -28,12 +29,20 @@ class Maquinaria
     private ?string $imagen = null;
 
     #[ORM\Column]
+    #[Assert\Range(
+        min: 0,
+        max: 11,
+    )]
     private ?int $cantidad = null;
 
     #[ORM\Column(nullable: true)]
+    #[Assert\GreaterThanOrEqual(
+        value: 0,
+        message: 'El valor debe ser superior o igual a 0'
+    )]
     private ?int $aniosUso = null;
 
-    #[ORM\Column(type: 'datetime', nullable: true)]
+    #[ORM\Column(type: 'datetime', nullable: true)] 
     private ?\DateTimeInterface $ultimoService = null;
 
     #[ORM\ManyToMany(targetEntity: Receta::class, inversedBy: 'maquinarias')]
